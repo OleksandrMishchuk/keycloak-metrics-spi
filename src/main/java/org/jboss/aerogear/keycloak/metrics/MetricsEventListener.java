@@ -4,18 +4,19 @@ import org.jboss.logging.Logger;
 import org.keycloak.events.Event;
 import org.keycloak.events.EventListenerProvider;
 import org.keycloak.events.admin.AdminEvent;
-import org.keycloak.models.RealmProvider;
+import org.keycloak.models.KeycloakSession;
 
 public class MetricsEventListener implements EventListenerProvider {
 
     public final static String ID = "metrics-listener";
 
     private final static Logger logger = Logger.getLogger(MetricsEventListener.class);
-    private final RealmProvider realmProvider;
+    private final KeycloakSession keycloakSession;
 
-    public MetricsEventListener(RealmProvider realmProvider) {
-        this.realmProvider = realmProvider;
+    public MetricsEventListener(KeycloakSession keycloakSession) {
+        this.keycloakSession = keycloakSession;
     }
+
 
     @Override
     public void onEvent(Event event) {
@@ -23,37 +24,42 @@ public class MetricsEventListener implements EventListenerProvider {
 
         switch (event.getType()) {
             case LOGIN:
-                PrometheusExporter.instance().recordLogin(event, realmProvider);
+                PrometheusExporter.instance().recordLogin(event, keycloakSession.realms());
+                PrometheusExporter.instance().recordSessions(event, keycloakSession);
                 break;
             case CLIENT_LOGIN:
-                PrometheusExporter.instance().recordClientLogin(event, realmProvider);
+                PrometheusExporter.instance().recordClientLogin(event, keycloakSession.realms());
+                PrometheusExporter.instance().recordSessions(event, keycloakSession);
+                break;
+            case LOGOUT:
+                PrometheusExporter.instance().recordSessions(event, keycloakSession);
                 break;
             case REGISTER:
-                PrometheusExporter.instance().recordRegistration(event, realmProvider);
+                PrometheusExporter.instance().recordRegistration(event, keycloakSession.realms());
                 break;
             case REFRESH_TOKEN:
-                PrometheusExporter.instance().recordRefreshToken(event, realmProvider);
+                PrometheusExporter.instance().recordRefreshToken(event, keycloakSession.realms());
                 break;
             case CODE_TO_TOKEN:
-                PrometheusExporter.instance().recordCodeToToken(event, realmProvider);
+                PrometheusExporter.instance().recordCodeToToken(event, keycloakSession.realms());
                 break;
             case REGISTER_ERROR:
-                PrometheusExporter.instance().recordRegistrationError(event, realmProvider);
+                PrometheusExporter.instance().recordRegistrationError(event, keycloakSession.realms());
                 break;
             case LOGIN_ERROR:
-                PrometheusExporter.instance().recordLoginError(event, realmProvider);
+                PrometheusExporter.instance().recordLoginError(event, keycloakSession.realms());
                 break;
             case CLIENT_LOGIN_ERROR:
-                PrometheusExporter.instance().recordClientLoginError(event, realmProvider);
+                PrometheusExporter.instance().recordClientLoginError(event, keycloakSession.realms());
                 break;
             case REFRESH_TOKEN_ERROR:
-                PrometheusExporter.instance().recordRefreshTokenError(event, realmProvider);
+                PrometheusExporter.instance().recordRefreshTokenError(event, keycloakSession.realms());
                 break;
             case CODE_TO_TOKEN_ERROR:
-                PrometheusExporter.instance().recordCodeToTokenError(event, realmProvider);
+                PrometheusExporter.instance().recordCodeToTokenError(event, keycloakSession.realms());
                 break;
             default:
-                PrometheusExporter.instance().recordGenericEvent(event, realmProvider);
+                PrometheusExporter.instance().recordGenericEvent(event, keycloakSession.realms());
         }
     }
 
@@ -61,7 +67,7 @@ public class MetricsEventListener implements EventListenerProvider {
     public void onEvent(AdminEvent event, boolean includeRepresentation) {
         logAdminEventDetails(event);
 
-        PrometheusExporter.instance().recordGenericAdminEvent(event, realmProvider);
+        PrometheusExporter.instance().recordGenericAdminEvent(event, keycloakSession.realms());
     }
 
     private void logEventDetails(Event event) {
